@@ -10,7 +10,7 @@
 
   <PropertyGroup>
     <PackageId>Estrol.Audio</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.0.2</Version>
     <Authors>Estrol</Authors>
     <Description>Estrol.Audio is a simple audio wrapper for EstAudio library for .NET</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -18,7 +18,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All"/>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
 
     <None Include="README.md">
       <Pack>true</Pack>
@@ -26,11 +26,11 @@
     </None>
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(OS)' == 'WINDOWS_NT'">
-      <None Include="$(MSBuildThisFileDirectory)\native\win-x64\EstAudio.dll">
-        <PackagePath>runtimes/win-x64/native</PackagePath>
-        <Pack>true</Pack>
-      </None>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)\native\win-x64\EstAudio.dll">
+      <PackagePath>runtimes/win-x64/native</PackagePath>
+      <Pack>true</Pack>
+    </None>
   </ItemGroup>
 
 </Project>
