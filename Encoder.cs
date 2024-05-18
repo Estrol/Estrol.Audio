@@ -3,9 +3,27 @@ namespace Estrol.Audio
     using System.Runtime.InteropServices;
     using Estrol.Audio.Bindings;
 
-    public class Encoder
+    public class Encoder : IDisposable
     {
         public IntPtr Handle { get; private set; } = Bindings_Header.INVALID_HANDLE;
+
+        internal Encoder()
+        {
+
+        }
+
+        public void Destroy()
+        {
+            AudioManager.Instance.Encoders.Remove(this);
+
+            if (Handle == Bindings_Header.INVALID_HANDLE)
+            {
+                return;
+            }
+
+            Bindings_Encoder.EST_EncoderFree(Handle);
+            Handle = Bindings_Header.INVALID_HANDLE;
+        }
 
         public void LoadFromFile(string file)
         {
@@ -174,6 +192,20 @@ namespace Estrol.Audio
 
                 Bindings_Encoder.EST_EncoderSetAttribute(Handle, (int)EST_ATTRIBUTE_FLAGS.EST_ATTRIB_PAN, value);
             }
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                Destroy();
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
     }
 }

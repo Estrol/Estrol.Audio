@@ -3,9 +3,14 @@
     using System.Runtime.InteropServices;
     using Estrol.Audio.Bindings;
 
-    public class Sample
+    public class Sample : IDisposable
     {
         private IntPtr Handle = Bindings_Header.INVALID_HANDLE;
+
+        internal Sample()
+        {
+
+        }
 
         public void Play()
         {
@@ -29,6 +34,8 @@
 
         public void Destroy()
         {
+            AudioManager.Instance.Samples.Remove(this);
+
             if (Handle == Bindings_Header.INVALID_HANDLE)
             {
                 return;
@@ -171,6 +178,20 @@
 
                 Bindings_Sample.EST_SampleSetAttribute(Handle, (int)EST_ATTRIBUTE_FLAGS.EST_ATTRIB_PAN, value);
             }
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                Destroy();
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
     }
 }

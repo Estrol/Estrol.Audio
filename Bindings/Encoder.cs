@@ -4,7 +4,7 @@ namespace Estrol.Audio.Bindings
 
     partial class Bindings_Encoder
     {
-        [LibraryImport("EstAudio", EntryPoint = "EST_EncoderLoad")]
+        [LibraryImport("EstAudio")]
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
         public static partial EST_RESULT EST_EncoderLoad(IntPtr path, IntPtr callback, int flags, out IntPtr out_handle);
 

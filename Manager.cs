@@ -3,12 +3,13 @@ namespace Estrol.Audio
     using System;
     using Estrol.Audio.Bindings;
 
-    public class SampleManager
+    public class AudioManager
     {
-        public static SampleManager Instance { get; private set; } = new();
-        private readonly Dictionary<string, Sample> Samples = [];
+        public static AudioManager Instance { get; private set; } = new();
+        internal readonly List<Sample> Samples = [];
+        internal readonly List<Encoder> Encoders = [];
 
-        public static void Intiialize()
+        public static void Init()
         {
             EST_RESULT rc = Bindings_Sample.EST_DeviceInit(44100, (int)EST_DEVICE_FLAGS.EST_DEVICE_STEREO);
             if (rc != EST_RESULT.EST_OK)
@@ -21,7 +22,7 @@ namespace Estrol.Audio
         {
             foreach (var Sample in Instance.Samples)
             {
-                Sample.Value.Destroy();
+                Sample.Destroy();
             }
 
             Instance.Samples.Clear();
@@ -30,8 +31,7 @@ namespace Estrol.Audio
 
         public static void PlaySample(string path, float volume = 1.0f, float rate = 1.0f, float pan = 0.0f)
         {
-            string hash = "Helper.HashPath(path);";
-            Sample? Sample = Instance.Samples.TryGetValue(hash, out Sample? value) ? value : LoadSample(path);
+            Sample Sample = LoadSample(path);
 
             Sample.Volume = volume;
             Sample.Rate = rate;
@@ -42,16 +42,10 @@ namespace Estrol.Audio
 
         public static Sample LoadSample(string path)
         {
-            string hash = "Helper.HashPath(path);";
-            if (Instance.Samples.TryGetValue(hash, out Sample? value))
-            {
-                return value;
-            }
-
             Sample Sample = new();
             Sample.LoadFromFile(path);
 
-            Instance.Samples.Add(hash, Sample);
+            Instance.Samples.Add(Sample);
             return Sample;
         }
 
@@ -60,6 +54,7 @@ namespace Estrol.Audio
             Sample Sample = new();
             Sample.LoadFromEncoder(encoder);
 
+            Instance.Samples.Add(Sample);
             return Sample;
         }
 
@@ -68,6 +63,7 @@ namespace Estrol.Audio
             Encoder encoder = new();
             encoder.LoadFromFile(path);
 
+            Instance.Encoders.Add(encoder);
             return encoder;
         }
     }
