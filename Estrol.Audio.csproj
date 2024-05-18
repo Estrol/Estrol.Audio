@@ -14,10 +14,16 @@
     <Authors>Estrol</Authors>
     <Description>Estrol.Audio is a simple audio wrapper for EstAudio library for .NET</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All"/>
+
+    <None Include="README.md">
+      <Pack>true</Pack>
+      <PackagePath>README.md</PackagePath>
+    </None>
   </ItemGroup>
 
   <ItemGroup Condition=" '$(OS)' == 'WINDOWS_NT'">
