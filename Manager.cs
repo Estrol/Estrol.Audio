@@ -20,7 +20,7 @@ namespace Estrol.Audio
 
         public static void Destroy()
         {
-            foreach (var Sample in Instance.Samples)
+            foreach (var Sample in Instance.Samples.ToList())
             {
                 Sample.Destroy();
             }
