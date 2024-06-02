@@ -19,10 +19,10 @@ namespace Estrol.Audio.Bindings
         public static partial EST_RESULT EST_SampleLoad(IntPtr path, out IntPtr out_handle);
         [LibraryImport("EstAudio")]
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
-        public static partial EST_RESULT EST_SampleLoadMemory(IntPtr data, int size, IntPtr out_handle);
+        public static partial EST_RESULT EST_SampleLoadMemory(IntPtr data, int size, out IntPtr out_handle);
         [LibraryImport("EstAudio")]
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
-        public static partial EST_RESULT EST_SampleLoadRawPCM(IntPtr data, int size, int channels, int sampleRate, IntPtr out_handle);
+        public static partial EST_RESULT EST_SampleLoadRawPCM(IntPtr data, int size, int channels, int sampleRate, out IntPtr out_handle);
         [LibraryImport("EstAudio")]
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
         public static partial EST_RESULT EST_SampleFree(IntPtr handle);

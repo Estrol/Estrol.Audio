@@ -49,6 +49,15 @@ namespace Estrol.Audio
             return Sample;
         }
 
+        public static Sample LoadSample(byte[] data)
+        {
+            Sample Sample = new();
+            Sample.LoadFromMemory(data);
+
+            Instance.Samples.Add(Sample);
+            return Sample;
+        }
+
         public static Sample LoadSample(Encoder encoder)
         {
             Sample Sample = new();
@@ -62,6 +71,15 @@ namespace Estrol.Audio
         {
             Encoder encoder = new();
             encoder.LoadFromFile(path);
+
+            Instance.Encoders.Add(encoder);
+            return encoder;
+        }
+
+        public static Encoder LoadEncoder(byte[] data)
+        {
+            Encoder encoder = new();
+            encoder.LoadFromMemory(data);
 
             Instance.Encoders.Add(encoder);
             return encoder;

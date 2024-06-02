@@ -69,6 +69,29 @@
             }
         }
 
+        public void LoadFromMemory(byte[] data)
+        {
+            if (Handle != IntPtr.Zero)
+            {
+                Bindings_Sample.EST_SampleFree(Handle);
+            }
+
+            IntPtr ptr = Marshal.AllocHGlobal(data.Length);
+            Marshal.Copy(data, 0, ptr, data.Length);
+
+            EST_RESULT rc = Bindings_Sample.EST_SampleLoadMemory(ptr, data.Length, out Handle);
+            if (rc != EST_RESULT.EST_OK)
+            {
+                IntPtr error = Bindings_Sample.EST_GetError();
+                string? errorStr = Marshal.PtrToStringUTF8(error);
+
+                Marshal.FreeHGlobal(ptr);
+                throw new Exception("Failed to load sample: " + errorStr);
+            }
+
+            Marshal.FreeHGlobal(ptr);
+        }
+
         public void LoadFromEncoder(Encoder encoder)
         {
             if (Handle != IntPtr.Zero)
