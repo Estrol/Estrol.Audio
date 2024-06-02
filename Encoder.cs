@@ -12,6 +12,16 @@ namespace Estrol.Audio
 
         }
 
+        public void Render()
+        {
+            if (Handle == Bindings_Header.INVALID_HANDLE)
+            {
+                return;
+            }
+
+            Bindings_Encoder.EST_EncoderRender(Handle);
+        }
+
         public void Destroy()
         {
             AudioManager.Instance.Encoders.Remove(this);
