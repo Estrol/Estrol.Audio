@@ -16,6 +16,8 @@
     <Description>Estrol.Audio is a simple audio wrapper for EstAudio library for .NET</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/Estrol/Estrol.Audio</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
   <ItemGroup>
