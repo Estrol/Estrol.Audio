@@ -2,7 +2,7 @@ namespace Estrol.Audio.Bindings
 {
     using System.Runtime.InteropServices;
 
-    partial class Bindings_Encoder
+    public partial class Bindings_Encoder
     {
         [LibraryImport("EstAudio")]
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
@@ -46,7 +46,7 @@ namespace Estrol.Audio.Bindings
 
         [LibraryImport("EstAudio")]
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
-        public static partial EST_RESULT EST_EncoderGetSample(IntPtr handle, out IntPtr outSample);
+        public static partial EST_RESULT EST_EncoderGetSample(IntPtr handle, IntPtr devHandle, out IntPtr outSample);
 
         [LibraryImport("EstAudio")]
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]

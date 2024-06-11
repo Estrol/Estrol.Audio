@@ -1,5 +1,6 @@
 ﻿namespace Estrol.Audio
 {
+    using System.Diagnostics;
     using System.Runtime.InteropServices;
     using Estrol.Audio.Bindings;
 
@@ -19,7 +20,7 @@
                 return;
             }
 
-            Bindings_Sample.EST_SamplePlay(Handle);
+            Bindings_Sample.EST_SamplePlay(AudioManager.Instance.DeviceHandle, Handle);
         }
 
         public void Stop()
@@ -29,7 +30,7 @@
                 return;
             }
 
-            Bindings_Sample.EST_SampleStop(Handle);
+            Bindings_Sample.EST_SampleStop(AudioManager.Instance.DeviceHandle, Handle);
         }
 
         public void Destroy()
@@ -41,7 +42,7 @@
                 return;
             }
 
-            Bindings_Sample.EST_SampleFree(Handle);
+            Bindings_Sample.EST_SampleFree(AudioManager.Instance.DeviceHandle, Handle);
             Handle = Bindings_Header.INVALID_HANDLE;
         }
 
@@ -49,14 +50,14 @@
         {
             if (Handle != IntPtr.Zero)
             {
-                Bindings_Sample.EST_SampleFree(Handle);
+                Bindings_Sample.EST_SampleFree(AudioManager.Instance.DeviceHandle, Handle);
             }
 
             unsafe
             {
                 IntPtr ptr = Marshal.StringToHGlobalAnsi(file);
 
-                EST_RESULT rc = Bindings_Sample.EST_SampleLoad(ptr, out Handle);
+                EST_RESULT rc = Bindings_Sample.EST_SampleLoad(AudioManager.Instance.DeviceHandle, ptr, out Handle);
                 if (rc != EST_RESULT.EST_OK)
                 {
                     IntPtr error = Bindings_Sample.EST_GetError();
@@ -73,13 +74,13 @@
         {
             if (Handle != IntPtr.Zero)
             {
-                Bindings_Sample.EST_SampleFree(Handle);
+                Bindings_Sample.EST_SampleFree(AudioManager.Instance.DeviceHandle, Handle);
             }
 
             IntPtr ptr = Marshal.AllocHGlobal(data.Length);
             Marshal.Copy(data, 0, ptr, data.Length);
 
-            EST_RESULT rc = Bindings_Sample.EST_SampleLoadMemory(ptr, data.Length, out Handle);
+            EST_RESULT rc = Bindings_Sample.EST_SampleLoadMemory(AudioManager.Instance.DeviceHandle, ptr, data.Length, out Handle);
             if (rc != EST_RESULT.EST_OK)
             {
                 IntPtr error = Bindings_Sample.EST_GetError();
@@ -96,10 +97,10 @@
         {
             if (Handle != IntPtr.Zero)
             {
-                Bindings_Sample.EST_SampleFree(Handle);
+                Bindings_Sample.EST_SampleFree(AudioManager.Instance.DeviceHandle, Handle);
             }
 
-            var result = Bindings_Encoder.EST_EncoderGetSample(encoder.Handle, out Handle);
+            var result = Bindings_Encoder.EST_EncoderGetSample(encoder.Handle, AudioManager.Instance.DeviceHandle, out Handle);
             if (result != EST_RESULT.EST_OK)
             {
                 IntPtr error = Bindings_Sample.EST_GetError();
@@ -109,6 +110,7 @@
             }
         }
 
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         public bool Pitch
         {
             get
@@ -118,7 +120,7 @@
                     return false;
                 }
 
-                Bindings_Sample.EST_SampleGetAttribute(Handle, (int)EST_ATTRIBUTE_FLAGS.EST_ATTRIB_PITCH, out IntPtr value);
+                Bindings_Sample.EST_SampleGetAttribute(AudioManager.Instance.DeviceHandle, Handle, (int)EST_ATTRIBUTE_FLAGS.EST_ATTRIB_PITCH, out IntPtr value);
                 float pitch = Marshal.PtrToStructure<float>(value);
 
                 return pitch != 0.0f;
@@ -130,10 +132,11 @@
                     return;
                 }
 
-                Bindings_Sample.EST_SampleSetAttribute(Handle, (int)EST_ATTRIBUTE_FLAGS.EST_ATTRIB_PITCH, value ? 1.0f : 0.0f);
+                Bindings_Sample.EST_SampleSetAttribute(AudioManager.Instance.DeviceHandle, Handle, (int)EST_ATTRIBUTE_FLAGS.EST_ATTRIB_PITCH, value ? 1.0f : 0.0f);
             }
         }
 
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         public float Rate
         {
             get
@@ -143,7 +146,7 @@
                     return 0.0f;
                 }
 
-                Bindings_Sample.EST_SampleGetAttribute(Handle, (int)EST_ATTRIBUTE_FLAGS.EST_ATTRIB_RATE, out IntPtr value);
+                Bindings_Sample.EST_SampleGetAttribute(AudioManager.Instance.DeviceHandle, Handle, (int)EST_ATTRIBUTE_FLAGS.EST_ATTRIB_RATE, out IntPtr value);
                 return Marshal.PtrToStructure<float>(value);
             }
             set
@@ -153,10 +156,11 @@
                     return;
                 }
 
-                Bindings_Sample.EST_SampleSetAttribute(Handle, (int)EST_ATTRIBUTE_FLAGS.EST_ATTRIB_RATE, value);
+                Bindings_Sample.EST_SampleSetAttribute(AudioManager.Instance.DeviceHandle, Handle, (int)EST_ATTRIBUTE_FLAGS.EST_ATTRIB_RATE, value);
             }
         }
 
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         public float Volume
         {
             get
@@ -166,7 +170,7 @@
                     return 0.0f;
                 }
 
-                Bindings_Sample.EST_SampleGetAttribute(Handle, (int)EST_ATTRIBUTE_FLAGS.EST_ATTRIB_VOLUME, out IntPtr value);
+                Bindings_Sample.EST_SampleGetAttribute(AudioManager.Instance.DeviceHandle, Handle, (int)EST_ATTRIBUTE_FLAGS.EST_ATTRIB_VOLUME, out IntPtr value);
                 return Marshal.PtrToStructure<float>(value);
             }
             set
@@ -176,10 +180,11 @@
                     return;
                 }
 
-                Bindings_Sample.EST_SampleSetAttribute(Handle, (int)EST_ATTRIBUTE_FLAGS.EST_ATTRIB_VOLUME, value);
+                Bindings_Sample.EST_SampleSetAttribute(AudioManager.Instance.DeviceHandle, Handle, (int)EST_ATTRIBUTE_FLAGS.EST_ATTRIB_VOLUME, value);
             }
         }
 
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         public float Pan
         {
             get
@@ -189,7 +194,7 @@
                     return 0.0f;
                 }
 
-                Bindings_Sample.EST_SampleGetAttribute(Handle, (int)EST_ATTRIBUTE_FLAGS.EST_ATTRIB_PAN, out IntPtr value);
+                Bindings_Sample.EST_SampleGetAttribute(AudioManager.Instance.DeviceHandle, Handle, (int)EST_ATTRIBUTE_FLAGS.EST_ATTRIB_PAN, out IntPtr value);
                 return Marshal.PtrToStructure<float>(value);
             }
             set
@@ -199,7 +204,7 @@
                     return;
                 }
 
-                Bindings_Sample.EST_SampleSetAttribute(Handle, (int)EST_ATTRIBUTE_FLAGS.EST_ATTRIB_PAN, value);
+                Bindings_Sample.EST_SampleSetAttribute(AudioManager.Instance.DeviceHandle, Handle, (int)EST_ATTRIBUTE_FLAGS.EST_ATTRIB_PAN, value);
             }
         }
 

@@ -8,10 +8,11 @@ namespace Estrol.Audio
         public static AudioManager Instance { get; private set; } = new();
         internal readonly List<Sample> Samples = [];
         internal readonly List<Encoder> Encoders = [];
+        internal IntPtr DeviceHandle = Bindings_Header.INVALID_HANDLE;
 
         public static void Init()
         {
-            EST_RESULT rc = Bindings_Sample.EST_DeviceInit(44100, (int)EST_DEVICE_FLAGS.EST_DEVICE_STEREO);
+            EST_RESULT rc = Bindings_Sample.EST_DeviceInit(44100, (int)EST_DEVICE_FLAGS.EST_DEVICE_STEREO, out Instance.DeviceHandle);
             if (rc != EST_RESULT.EST_OK)
             {
                 throw new Exception("Failed to initialize device");
@@ -26,7 +27,7 @@ namespace Estrol.Audio
             }
 
             Instance.Samples.Clear();
-            Bindings_Sample.EST_DeviceFree();
+            Bindings_Sample.EST_DeviceFree(Instance.DeviceHandle);
         }
 
         public static void PlaySample(string path, float volume = 1.0f, float rate = 1.0f, float pan = 0.0f)
