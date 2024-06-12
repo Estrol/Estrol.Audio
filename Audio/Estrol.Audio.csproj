@@ -11,7 +11,7 @@
 
   <PropertyGroup>
     <PackageId>Estrol.Audio</PackageId>
-    <Version>2.0.0</Version>
+    <Version>2.0.1</Version>
     <Authors>Estrol</Authors>
     <Description>Estrol.Audio is a simple audio wrapper for EstAudio library for .NET</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
