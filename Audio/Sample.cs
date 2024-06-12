@@ -6,7 +6,7 @@
 
     public class Sample : IDisposable
     {
-        private IntPtr Handle = Bindings_Header.INVALID_HANDLE;
+        public IntPtr Handle = Bindings_Header.INVALID_HANDLE;
 
         internal Sample()
         {
