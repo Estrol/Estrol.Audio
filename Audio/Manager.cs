@@ -1,88 +1,109 @@
 namespace Estrol.Audio
 {
     using System;
+    using System.Runtime.InteropServices;
     using Estrol.Audio.Bindings;
+
+    public enum DeviceFlags
+    {
+        Unknown = EST_DEVICE_FLAGS.EST_DEVICE_UNKNOWN,
+        Mono = EST_DEVICE_FLAGS.EST_DEVICE_MONO,
+        Stereo = EST_DEVICE_FLAGS.EST_DEVICE_STEREO,
+        FormatS16 = EST_DEVICE_FLAGS.EST_DEVICE_FORMAT_S16,
+        FormatF32 = EST_DEVICE_FLAGS.EST_DEVICE_FORMAT_F32
+    }
 
     public class AudioManager
     {
         public static AudioManager Instance { get; private set; } = new();
-        internal readonly List<Sample> Samples = [];
-        internal readonly List<Encoder> Encoders = [];
-        internal IntPtr DeviceHandle = Bindings_Header.INVALID_HANDLE;
+        public IntPtr Handle { get; private set; } = IntPtr.Zero;
+        internal List<Channel> Channels { get; private set; } = [];
 
-        public static void Init()
+        internal AudioManager()
         {
-            EST_RESULT rc = Bindings_Sample.EST_DeviceInit(44100, (int)EST_DEVICE_FLAGS.EST_DEVICE_STEREO, out Instance.DeviceHandle);
-            if (rc != EST_RESULT.EST_OK)
-            {
-                throw new Exception("Failed to initialize device");
-            }
         }
 
-        public static void Destroy()
+        public static void Init(int sampleRate, DeviceFlags flags)
         {
-            foreach (var Sample in Instance.Samples.ToList())
+            if (Instance.Handle != IntPtr.Zero)
             {
-                Sample.Destroy();
+                return;
             }
 
-            Instance.Samples.Clear();
-            Bindings_Sample.EST_DeviceFree(Instance.DeviceHandle);
+            IntPtr handle = Device_Bindings.EST_DeviceInit(sampleRate, (int)flags);
+            if (handle == IntPtr.Zero)
+            {
+                IntPtr errorMsg = Device_Bindings.EST_ErrorGetMessage();
+                string? errorStr = Marshal.PtrToStringUTF8(errorMsg);
+
+                throw new Exception($"Failed to initialize audio device: {errorStr}");
+            }
+
+            Instance.Handle = handle;
         }
 
-        public static void PlaySample(string path, float volume = 1.0f, float rate = 1.0f, float pan = 0.0f)
+        public static void Free()
         {
-            Sample Sample = LoadSample(path);
+            if (Instance.Handle == IntPtr.Zero)
+            {
+                return;
+            }
 
-            Sample.Volume = volume;
-            Sample.Rate = rate;
-            Sample.Pan = pan;
-
-            Sample.Play();
+            Device_Bindings.EST_DeviceFree(Instance.Handle);
         }
 
-        public static Sample LoadSample(string path)
+        public static Channel ChannelLoad(string file)
         {
-            Sample Sample = new();
-            Sample.LoadFromFile(path);
+            if (!File.Exists(file))
+            {
+                throw new Exception("File does not exist");
+            }
 
-            Instance.Samples.Add(Sample);
-            return Sample;
+            Channel channel = new(file);
+            Instance.Channels.Add(channel);
+
+            return channel;
         }
 
-        public static Sample LoadSample(byte[] data)
+        public static Channel ChannelLoad(byte[] data)
         {
-            Sample Sample = new();
-            Sample.LoadFromMemory(data);
+            Channel channel = new(data);
+            Instance.Channels.Add(channel);
 
-            Instance.Samples.Add(Sample);
-            return Sample;
+            return channel;
         }
 
-        public static Sample LoadSample(Encoder encoder)
+        public static Sample SampleLoad(string file)
         {
-            Sample Sample = new();
-            Sample.LoadFromEncoder(encoder);
+            if (!File.Exists(file))
+            {
+                throw new Exception("File does not exist");
+            }
 
-            Instance.Samples.Add(Sample);
-            return Sample;
+            Sample sample = new(file);
+            return sample;
         }
 
-        public static Encoder LoadEncoder(string path)
+        public static Sample SampleLoad(byte[] data)
         {
-            Encoder encoder = new();
-            encoder.LoadFromFile(path);
+            Sample sample = new(data);
+            return sample;
+        }
 
-            Instance.Encoders.Add(encoder);
+        public static Encoder EncoderLoad(string file, DecoderFlags flags = DecoderFlags.Unknown)
+        {
+            if (!File.Exists(file))
+            {
+                throw new Exception("File does not exist");
+            }
+
+            Encoder encoder = new(file, flags);
             return encoder;
         }
 
-        public static Encoder LoadEncoder(byte[] data)
+        public static Encoder EncoderLoad(byte[] data, DecoderFlags flags = DecoderFlags.Unknown)
         {
-            Encoder encoder = new();
-            encoder.LoadFromMemory(data);
-
-            Instance.Encoders.Add(encoder);
+            Encoder encoder = new(data, flags);
             return encoder;
         }
     }

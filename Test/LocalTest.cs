@@ -1,50 +1,66 @@
 namespace Estrol.EstAudio;
 using Estrol.Audio;
+using Xunit.Abstractions;
 
-public class LocalTest
+// public class PlaybackTest(ITestOutputHelper output)
+// {
+//     private readonly ITestOutputHelper output = output;
+
+//     [Fact]
+//     public void Test()
+//     {
+//         output.WriteLine("[Test] Initializing AudioManager");
+//         AudioManager.Init(44100, 0);
+
+//         output.WriteLine("[Test] Loading channel");
+//         var channel = AudioManager.ChannelLoad("F:\\test.wav");
+
+//         output.WriteLine("[Test] Playing channel");
+//         channel.Play(false);
+
+//         output.WriteLine("[Test] Waiting for 1 second");
+//         Thread.Sleep(1000);
+
+//         output.WriteLine("[Test] Stopping channel and freeing resources");
+//         channel.Stop();
+//         channel.Free();
+
+//         output.WriteLine("[Test] Freeing AudioManager resources");
+//         AudioManager.Free();
+//     }
+// }
+
+public class EncoderTest(ITestOutputHelper output)
 {
-    [Fact(DisplayName = "Sample Test")]
-    public void PlaybackTest()
+    private readonly ITestOutputHelper output = output;
+
+    [Fact]
+    public void Test()
     {
-        AudioManager.Init();
+        output.WriteLine("[Test] Initializing AudioManager");
+        AudioManager.Init(44100, 0);
 
-        var sample = AudioManager.LoadSample("F:\\test.wav");
-        Assert.True(sample != null);
+        var sample = AudioManager.SampleLoad("F:\\test.wav");
 
-        sample.Play();
+        List<Channel> channels = [];
+        channels.Add(sample.GetChannel());
+        channels.Add(sample.GetChannel());
+
+        output.WriteLine("[Test] Playing channels");
+        channels[0].Play();
 
         Thread.Sleep(1000);
 
-        sample.Stop();
-
-        sample.Destroy();
-
-        AudioManager.Destroy();
-    }
-
-    [Fact(DisplayName = "Encoder Test")]
-    public void EncoderTest()
-    {
-        AudioManager.Init();
-
-        var encoder = AudioManager.LoadEncoder("F:\\test.wav");
-        Assert.True(encoder != null);
-
-        encoder.Rate = 1.5f;
-        encoder.Volume = 0.5f;
-
-        var sample = AudioManager.LoadSample(encoder);
-        Assert.True(sample != null);
-
-        sample.Play();
+        channels[1].Play();
 
         Thread.Sleep(1000);
 
-        sample.Stop();
+        output.WriteLine("[Test] Waiting for 1 second");
 
-        sample.Destroy();
-        encoder.Destroy();
+        channels.ForEach(channel => channel.Stop());
+        channels.ForEach(channel => channel.Free());
 
-        AudioManager.Destroy();
+        output.WriteLine("[Test] Freeing AudioManager resources");
+        AudioManager.Free();
     }
 }

@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices;
+
 namespace Estrol.Audio.Bindings
 {
     public enum EST_RESULT
@@ -100,4 +102,39 @@ namespace Estrol.Audio.Bindings
 
     public delegate void EST_AUDIO_CALLBACK(IntPtr Handle, IntPtr pUserData, IntPtr pData, int frameCount);
     public delegate void EST_DECODER_CALLBACK(IntPtr Handle, IntPtr pUserData, IntPtr pData, int frameCount);
+
+    public enum EST_ATTRIB_VAL_TYPE
+    {
+        EST_ATTRIB_VAL_FLOAT,
+        EST_ATTRIB_VAL_INT,
+        EST_ATTRIB_VAL_BOOL
+    };
+
+    [StructLayout(LayoutKind.Explicit)]
+    public struct ESTAttributeValue
+    {
+        [FieldOffset(0)]
+        public EST_ATTRIBUTE_FLAGS attribute;
+
+        [FieldOffset(4)]
+        public EST_ATTRIB_VAL_TYPE type;
+
+        [FieldOffset(8)]
+        public float floatValue;
+        [FieldOffset(8)]
+        public int intValue;
+        [FieldOffset(8)]
+        public EST_BOOL boolValue;
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    public struct ESTEncoderInfo
+    {
+        [FieldOffset(0)]
+        public int sampleRate;
+        [FieldOffset(4)]
+        public int channels;
+        [FieldOffset(8)]
+        public int pcmSize;
+    }
 }

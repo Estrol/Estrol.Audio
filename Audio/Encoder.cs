@@ -1,221 +1,308 @@
+using System.Runtime.InteropServices;
+using Estrol.Audio.Bindings;
+
 namespace Estrol.Audio
 {
-    using System.Runtime.InteropServices;
-    using Estrol.Audio.Bindings;
-
-    public class Encoder : IDisposable
+    public enum DecoderFlags
     {
-        public IntPtr Handle { get; private set; } = Bindings_Header.INVALID_HANDLE;
+        Unknown = EST_DECODER_FLAGS.EST_DECODER_UNKNOWN,
 
-        internal Encoder()
+        Mono = EST_DECODER_FLAGS.EST_DECODER_MONO,
+        Stereo = EST_DECODER_FLAGS.EST_DECODER_STEREO,
+
+        FloatSingle = EST_DECODER_FLAGS.EST_DECODER_FORMAT_S16, // (NOT IMPLEMENTED)
+        FloatDouble = EST_DECODER_FLAGS.EST_DECODER_FORMAT_F32, // (NOT IMPLEMENTED)
+    }
+
+    public class Encoder
+    {
+        public IntPtr Handle { get; private set; }
+
+        internal Encoder(IntPtr handle)
         {
-
-        }
-
-        public void Render()
-        {
-            if (Handle == Bindings_Header.INVALID_HANDLE)
+            if (handle == IntPtr.Zero)
             {
-                return;
+                throw new Exception("Invalid channel handle");
             }
 
-            Bindings_Encoder.EST_EncoderRender(Handle);
+            Handle = handle;
+
+            LoadAttributes();
         }
 
-        public void Destroy()
+        internal Encoder(string path, DecoderFlags flags = DecoderFlags.Unknown)
         {
-            AudioManager.Instance.Encoders.Remove(this);
+            IntPtr pathPtr = Marshal.StringToHGlobalAnsi(path);
+            Handle = Bindings_Encoder.EST_EncoderLoad(pathPtr, IntPtr.Zero, (int)flags);
+            Marshal.FreeHGlobal(pathPtr);
 
-            if (Handle == Bindings_Header.INVALID_HANDLE)
+            if (Handle == IntPtr.Zero)
+            {
+                IntPtr errorMsg = Device_Bindings.EST_ErrorGetMessage();
+                string? errorStr = Marshal.PtrToStringUTF8(errorMsg);
+
+                throw new Exception($"Failed to load encoder: {errorStr}");
+            }
+
+            LoadAttributes();
+        }
+
+        internal Encoder(byte[] data, DecoderFlags flags = DecoderFlags.Unknown)
+        {
+            IntPtr dataPtr = Marshal.AllocHGlobal(data.Length);
+            Marshal.Copy(data, 0, dataPtr, data.Length);
+
+            Handle = Bindings_Encoder.EST_EncoderLoadMemory(dataPtr, data.Length, IntPtr.Zero, (EST_DECODER_FLAGS)flags);
+            Marshal.FreeHGlobal(dataPtr);
+
+            if (Handle == IntPtr.Zero)
+            {
+                IntPtr errorMsg = Device_Bindings.EST_ErrorGetMessage();
+                string? errorStr = Marshal.PtrToStringUTF8(errorMsg);
+
+                throw new Exception($"Failed to load encoder: {errorStr}");
+            }
+
+            LoadAttributes();
+        }
+
+        public bool Render()
+        {
+            EST_RESULT result = Bindings_Encoder.EST_EncoderRender(Handle);
+            return result == EST_RESULT.EST_OK;
+        }
+
+        public void Save(string file)
+        {
+            IntPtr pathPtr = Marshal.StringToHGlobalAnsi(file);
+            EST_RESULT result = Bindings_Encoder.EST_EncoderExportFile(Handle, EST_FILE_EXPORT.EST_EXPORT_WAV, pathPtr);
+            Marshal.FreeHGlobal(pathPtr);
+
+            if (result != EST_RESULT.EST_OK)
+            {
+                IntPtr errorMsg = Device_Bindings.EST_ErrorGetMessage();
+                string? errorStr = Marshal.PtrToStringUTF8(errorMsg);
+
+                throw new Exception($"Failed to save encoder: {errorStr}");
+            }
+        }
+
+        public Channel GetChannel()
+        {
+            if (Handle == IntPtr.Zero)
+            {
+                throw new Exception("Invalid encoder handle");
+            }
+
+            IntPtr channel = Bindings_Channel.EST_EncoderGetChannel(AudioManager.Instance.Handle, Handle);
+            if (channel == IntPtr.Zero)
+            {
+                IntPtr errorMsg = Device_Bindings.EST_ErrorGetMessage();
+                string? errorStr = Marshal.PtrToStringUTF8(errorMsg);
+
+                throw new Exception($"Failed to get channel: {errorStr}");
+            }
+
+            Channel instance = new(channel);
+            AudioManager.Instance.Channels.Add(instance);
+
+            return new Channel(channel);
+        }
+
+        public Channel[] GetChannels(int size)
+        {
+            if (Handle == IntPtr.Zero)
+            {
+                throw new Exception("Invalid Encoder handle");
+            }
+
+            IntPtr channelsPtr = Marshal.AllocHGlobal(size * IntPtr.Size);
+            int count = Bindings_Channel.EST_EncoderGetChannels(AudioManager.Instance.Handle, Handle, size, channelsPtr);
+
+            if (count == 0)
+            {
+                Marshal.FreeHGlobal(channelsPtr);
+                return [];
+            }
+
+            IntPtr[] channels = new IntPtr[count];
+            Marshal.Copy(channelsPtr, channels, 0, count);
+            Marshal.FreeHGlobal(channelsPtr);
+
+            Channel[] instances = new Channel[count];
+            for (int i = 0; i < count; i++)
+            {
+                instances[i] = new(channels[i]);
+                AudioManager.Instance.Channels.Add(instances[i]);
+            }
+
+            return instances;
+        }
+
+        public Sample GetSample()
+        {
+            if (Handle == IntPtr.Zero)
+            {
+                throw new Exception("Invalid Encoder handle");
+            }
+
+            IntPtr sample = Bindings_Sample.EST_SampleFromEncoder(Handle);
+            if (sample == IntPtr.Zero)
+            {
+                IntPtr errorMsg = Device_Bindings.EST_ErrorGetMessage();
+                string? errorStr = Marshal.PtrToStringUTF8(errorMsg);
+
+                throw new Exception($"Failed to get sample: {errorStr}");
+            }
+
+            return new Sample(sample);
+        }
+
+        public void Free()
+        {
+            if (Handle == IntPtr.Zero)
             {
                 return;
             }
 
             Bindings_Encoder.EST_EncoderFree(Handle);
-            Handle = Bindings_Header.INVALID_HANDLE;
+            Handle = IntPtr.Zero;
         }
 
-        public void LoadFromFile(string file)
+        private float _tempo = 1.0f;
+        private float _sampleRate = 44100.0f;
+        private float _volume = 1.0f;
+        private float _pan = 0.0f;
+
+        internal void LoadAttributes()
         {
-            if (Handle != Bindings_Header.INVALID_HANDLE)
+            ESTAttributeValue value = new()
             {
-                Bindings_Encoder.EST_EncoderFree(Handle);
+                attribute = EST_ATTRIBUTE_FLAGS.EST_ATTRIB_ENCODER_TEMPO,
+            };
+
+            EST_RESULT result = Bindings_Encoder.EST_EncoderGetAttribute(Handle, value);
+            if (result != EST_RESULT.EST_OK)
+            {
+                throw new Exception("Failed to get encoder tempo");
             }
 
-            IntPtr ptr = Marshal.StringToHGlobalAnsi(file);
+            _tempo = value.floatValue;
 
-            EST_RESULT rc = Bindings_Encoder.EST_EncoderLoad(ptr, IntPtr.Zero, (int)EST_DECODER_FLAGS.EST_DECODER_STEREO, out nint _out);
-            if (rc != EST_RESULT.EST_OK)
+            value.attribute = EST_ATTRIBUTE_FLAGS.EST_ATTRIB_ENCODER_SAMPLERATE;
+            result = Bindings_Encoder.EST_EncoderGetAttribute(Handle, value);
+            if (result != EST_RESULT.EST_OK)
             {
-                IntPtr error = Bindings_Sample.EST_GetError();
-                string? errorStr = Marshal.PtrToStringUTF8(error);
-
-                throw new Exception("Failed to load sample: " + errorStr);
+                throw new Exception("Failed to get encoder sample rate");
             }
 
-            Handle = _out;
-            Marshal.FreeHGlobal(ptr);
+            _sampleRate = value.floatValue;
+
+            value.attribute = EST_ATTRIBUTE_FLAGS.EST_ATTRIB_VOLUME;
+            result = Bindings_Encoder.EST_EncoderGetAttribute(Handle, value);
+            if (result != EST_RESULT.EST_OK)
+            {
+                throw new Exception("Failed to get encoder volume");
+            }
+
+            _volume = value.floatValue;
+
+            value.attribute = EST_ATTRIBUTE_FLAGS.EST_ATTRIB_PAN;
+            result = Bindings_Encoder.EST_EncoderGetAttribute(Handle, value);
+            if (result != EST_RESULT.EST_OK)
+            {
+                throw new Exception("Failed to get encoder pan");
+            }
+
+            _pan = value.floatValue;
         }
 
-        public void LoadFromMemory(byte[] data)
+        public float Tempo
         {
-            if (Handle != Bindings_Header.INVALID_HANDLE)
-            {
-                Bindings_Encoder.EST_EncoderFree(Handle);
-            }
-
-            GCHandle handle = GCHandle.Alloc(data, GCHandleType.Pinned);
-            IntPtr ptr = handle.AddrOfPinnedObject();
-
-            EST_RESULT rc = Bindings_Encoder.EST_EncoderLoadMemory(ptr, data.Length, IntPtr.Zero, EST_DECODER_FLAGS.EST_DECODER_STEREO, Handle);
-            if (rc != EST_RESULT.EST_OK)
-            {
-                IntPtr error = Bindings_Sample.EST_GetError();
-                string? errorStr = Marshal.PtrToStringUTF8(error);
-
-                throw new Exception("Failed to load sample: " + errorStr);
-            }
-
-            handle.Free();
-        }
-
-        public bool Pitch
-        {
-            get
-            {
-                if (Handle == Bindings_Header.INVALID_HANDLE)
-                {
-                    return false;
-                }
-
-                Bindings_Encoder.EST_EncoderGetAttribute(Handle, (int)EST_ATTRIBUTE_FLAGS.EST_ATTRIB_ENCODER_PITCH, out float pitch);
-                return pitch != 0.0f;
-            }
+            get => _tempo;
             set
             {
-                if (Handle == Bindings_Header.INVALID_HANDLE)
+                ESTAttributeValue val = new()
                 {
-                    return;
+                    attribute = EST_ATTRIBUTE_FLAGS.EST_ATTRIB_ENCODER_TEMPO,
+                    type = EST_ATTRIB_VAL_TYPE.EST_ATTRIB_VAL_FLOAT,
+                    floatValue = value,
+                };
+
+                EST_RESULT result = Bindings_Encoder.EST_EncoderSetAttribute(Handle, val);
+                if (result != EST_RESULT.EST_OK)
+                {
+                    throw new Exception("Failed to set encoder tempo");
                 }
 
-                Bindings_Encoder.EST_EncoderSetAttribute(Handle, (int)EST_ATTRIBUTE_FLAGS.EST_ATTRIB_ENCODER_PITCH, value ? 1.0f : 0.0f);
-            }
-        }
-
-        public float Rate
-        {
-            get
-            {
-                if (Handle == Bindings_Header.INVALID_HANDLE)
-                {
-                    return 0.0f;
-                }
-
-                EST_RESULT rc = Bindings_Encoder.EST_EncoderGetAttribute(Handle, (int)EST_ATTRIBUTE_FLAGS.EST_ATTRIB_ENCODER_TEMPO, out float attrib_value);
-                if (rc != EST_RESULT.EST_OK)
-                {
-                    return 0.0f;
-                }
-
-                return attrib_value;
-            }
-            set
-            {
-                if (Handle == Bindings_Header.INVALID_HANDLE)
-                {
-                    return;
-                }
-
-                Bindings_Encoder.EST_EncoderSetAttribute(Handle, (int)EST_ATTRIBUTE_FLAGS.EST_ATTRIB_ENCODER_TEMPO, value);
+                _tempo = val.floatValue;
             }
         }
 
         public float SampleRate
         {
-            get
-            {
-                if (Handle == Bindings_Header.INVALID_HANDLE)
-                {
-                    return 0.0f;
-                }
-
-                var rc = Bindings_Encoder.EST_EncoderGetAttribute(Handle, (int)EST_ATTRIBUTE_FLAGS.EST_ATTRIB_ENCODER_SAMPLERATE, out float value);
-                if (rc != EST_RESULT.EST_OK)
-                {
-                    return 0.0f;
-                }
-
-                return value;
-            }
+            get => _sampleRate;
             set
             {
-                if (Handle == Bindings_Header.INVALID_HANDLE)
+                ESTAttributeValue val = new()
                 {
-                    return;
+                    attribute = EST_ATTRIBUTE_FLAGS.EST_ATTRIB_ENCODER_SAMPLERATE,
+                    type = EST_ATTRIB_VAL_TYPE.EST_ATTRIB_VAL_FLOAT,
+                    floatValue = value,
+                };
+
+                EST_RESULT result = Bindings_Encoder.EST_EncoderSetAttribute(Handle, val);
+                if (result != EST_RESULT.EST_OK)
+                {
+                    throw new Exception("Failed to set encoder sample rate");
                 }
 
-                Bindings_Encoder.EST_EncoderSetAttribute(Handle, (int)EST_ATTRIBUTE_FLAGS.EST_ATTRIB_ENCODER_SAMPLERATE, value);
+                _sampleRate = val.floatValue;
             }
         }
 
         public float Volume
         {
-            get
-            {
-                if (Handle == Bindings_Header.INVALID_HANDLE)
-                {
-                    return 0.0f;
-                }
-
-                Bindings_Encoder.EST_EncoderGetAttribute(Handle, (int)EST_ATTRIBUTE_FLAGS.EST_ATTRIB_VOLUME, out float value);
-                return value;
-            }
+            get => _volume;
             set
             {
-                if (Handle == Bindings_Header.INVALID_HANDLE)
+                ESTAttributeValue val = new()
                 {
-                    return;
+                    attribute = EST_ATTRIBUTE_FLAGS.EST_ATTRIB_VOLUME,
+                    type = EST_ATTRIB_VAL_TYPE.EST_ATTRIB_VAL_FLOAT,
+                    floatValue = value,
+                };
+
+                EST_RESULT result = Bindings_Encoder.EST_EncoderSetAttribute(Handle, val);
+                if (result != EST_RESULT.EST_OK)
+                {
+                    throw new Exception("Failed to set encoder volume");
                 }
 
-                Bindings_Encoder.EST_EncoderSetAttribute(Handle, (int)EST_ATTRIBUTE_FLAGS.EST_ATTRIB_VOLUME, value);
+                _volume = val.floatValue;
             }
         }
 
         public float Pan
         {
-            get
-            {
-                if (Handle == Bindings_Header.INVALID_HANDLE)
-                {
-                    return 0.0f;
-                }
-
-                Bindings_Encoder.EST_EncoderGetAttribute(Handle, (int)EST_ATTRIBUTE_FLAGS.EST_ATTRIB_PAN, out float value);
-                return value;
-            }
+            get => _pan;
             set
             {
-                if (Handle == Bindings_Header.INVALID_HANDLE)
+                ESTAttributeValue val = new()
                 {
-                    return;
+                    attribute = EST_ATTRIBUTE_FLAGS.EST_ATTRIB_PAN,
+                    type = EST_ATTRIB_VAL_TYPE.EST_ATTRIB_VAL_FLOAT,
+                    floatValue = value,
+                };
+
+                EST_RESULT result = Bindings_Encoder.EST_EncoderSetAttribute(Handle, val);
+                if (result != EST_RESULT.EST_OK)
+                {
+                    throw new Exception("Failed to set encoder pan");
                 }
 
-                Bindings_Encoder.EST_EncoderSetAttribute(Handle, (int)EST_ATTRIBUTE_FLAGS.EST_ATTRIB_PAN, value);
+                _pan = val.floatValue;
             }
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                Destroy();
-            }
-        }
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
         }
     }
 }

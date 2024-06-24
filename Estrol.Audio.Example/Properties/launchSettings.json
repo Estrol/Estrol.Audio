@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Estrol.Audio.Example": {
+      "commandName": "Project",
+      "nativeDebugging": true
+    }
+  }
+}
