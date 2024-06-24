@@ -90,6 +90,12 @@ namespace Estrol.Audio
             return sample;
         }
 
+        public static Sample SampleLoad(Encoder encoder)
+        {
+            Sample sample = new(encoder);
+            return sample;
+        }
+
         public static Encoder EncoderLoad(string file, DecoderFlags flags = DecoderFlags.Unknown)
         {
             if (!File.Exists(file))

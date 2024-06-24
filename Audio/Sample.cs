@@ -38,8 +38,21 @@ namespace Estrol.Audio
             IntPtr dataPtr = Marshal.AllocHGlobal(data.Length);
             Marshal.Copy(data, 0, dataPtr, data.Length);
 
-            Handle = Bindings_Sample.EST_SampleLoadMemory(dataPtr, data.Length);
+            Handle = Bindings_Sample.EST_SampleLoadFromMemory(dataPtr, data.Length);
             Marshal.FreeHGlobal(dataPtr);
+
+            if (Handle == IntPtr.Zero)
+            {
+                IntPtr errorMsg = Device_Bindings.EST_ErrorGetMessage();
+                string? errorStr = Marshal.PtrToStringUTF8(errorMsg);
+
+                throw new Exception($"Failed to load Sample: {errorStr}");
+            }
+        }
+
+        internal Sample(Encoder encoder)
+        {
+            Handle = Bindings_Sample.EST_SampleFromEncoder(encoder.Handle);
 
             if (Handle == IntPtr.Zero)
             {
